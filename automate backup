@@ -1,0 +1,44 @@
+import os
+import shutil
+import paramiko
+from scp import SCPClient
+import logging
+
+# Set up logging
+logging.basicConfig(filename='backup.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# Configuration
+BACKUP_SRC_DIR = '/path/to/source/directory'
+REMOTE_HOST = 'remote.server.com'
+REMOTE_PORT = 22
+REMOTE_USER = 'username'
+REMOTE_DIR = '/path/to/remote/directory'
+SSH_KEY = '/path/to/ssh/key'
+
+def create_ssh_client(server, port, user, key):
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(server, port, user, key_filename=key)
+    return client
+
+def backup_directory(src_dir, remote_host, remote_port, remote_user, remote_dir, ssh_key):
+    try:
+        ssh = create_ssh_client(remote_host, remote_port, remote_user, ssh_key)
+        scp = SCPClient(ssh.get_transport())
+
+        scp.put(src_dir, remote_dir, recursive=True)
+        logging.info(f'Successfully backed up {src_dir} to {remote_host}:{remote_dir}')
+
+    except Exception as e:
+        logging.error(f'Backup failed: {e}')
+
+    finally:
+        scp.close()
+        ssh.close()
+
+def main():
+    backup_directory(BACKUP_SRC_DIR, REMOTE_HOST, REMOTE_PORT, REMOTE_USER, REMOTE_DIR, SSH_KEY)
+
+if __name__ == '__main__':
+    main()
